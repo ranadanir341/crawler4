@@ -186,7 +186,7 @@ async function startGatherer(jobId, topic, keywords, limit, selectors, io, activ
     console.log(`[Job ${jobId}] Search URLs:`, searchUrls);
     
     const crawler = new CheerioCrawler({
-      maxRequestsPerCrawl: targetLimit * 3, 
+      maxRequestsPerCrawl: targetLimit * 5, 
       requestHandlerTimeoutSecs: 45,
       preNavigationHooks: [
           async (crawlingContext, gotoOptions) => {
@@ -211,8 +211,9 @@ async function startGatherer(jobId, topic, keywords, limit, selectors, io, activ
             let matchesKeywords = true;
             if (searchKeywords) {
                const keywordList = searchKeywords.split(",").map(k => k.trim().toLowerCase()).filter(k => k);
+               const titleLower = title.toLowerCase();
                // More lenient matching: if any keyword is in title or text
-               matchesKeywords = keywordList.some(k => pageText.includes(k) || title.toLowerCase().includes(k));
+               matchesKeywords = keywordList.some(k => pageText.includes(k) || titleLower.includes(k));
             }
 
             if (matchesKeywords) {
@@ -256,10 +257,14 @@ async function startGatherer(jobId, topic, keywords, limit, selectors, io, activ
 
         // Enqueue links
         if (isDDG) {
-            const links = $('a.result__a').map((i, el) => $(el).attr('href')).get();
-            console.log(`[Job ${jobId}] Found ${links.length} links on DDG`);
+            // DuckDuckGo HTML version uses different selectors
+            const links = $('.result__a').map((i, el) => $(el).attr('href')).get();
+            const fallbackLinks = $('.result__title a').map((i, el) => $(el).attr('href')).get();
+            const allLinks = [...new Set([...links, ...fallbackLinks])];
             
-            for (let link of links) {
+            console.log(`[Job ${jobId}] Found ${allLinks.length} links on DDG`);
+            
+            for (let link of allLinks) {
                 if (link.startsWith('/l/')) {
                     try {
                         const urlObj = new URL(link, 'https://duckduckgo.com');

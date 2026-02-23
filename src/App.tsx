@@ -272,10 +272,28 @@ export default function App() {
   useEffect(() => {
     const newSocket = io();
     setSocket(newSocket);
-    return () => { newSocket.close(); };
-  }, []);
+    return () => { 
+      if (activeJobId) {
+        newSocket.off(`crawl-data-${activeJobId}`);
+        newSocket.off(`crawl-complete-${activeJobId}`);
+        newSocket.off(`crawl-error-${activeJobId}`);
+      }
+      newSocket.close(); 
+    };
+  }, [activeJobId]);
 
   const startCrawl = async () => {
+    if (mode === 'site' && !url) return;
+    if (mode === 'gather' && !topic) return;
+    
+    // Stop any active job and clean up listeners
+    if (activeJobId && socket) {
+      socket.emit('stop-crawl', { jobId: activeJobId });
+      socket.off(`crawl-data-${activeJobId}`);
+      socket.off(`crawl-complete-${activeJobId}`);
+      socket.off(`crawl-error-${activeJobId}`);
+    }
+
     setCrawling(true);
     setExtractedData([]); // Clear previous data
     setView('results'); // Switch to results view immediately
@@ -293,25 +311,28 @@ export default function App() {
       const { jobId } = await response.json();
       setActiveJobId(jobId);
       
-      socket.on(`crawl-data-${jobId}`, (data: any) => {
+      const dataHandler = (data: any) => {
         setStatusMessage(`Extracting from: ${data.url.substring(0, 50)}...`);
         setExtractedData(prev => {
-          if (prev.some(item => item.url === data.url)) return prev;
+          if (prev.some((item: any) => item.url === data.url)) return prev;
           return [...prev, data];
         });
-      });
-      
-      socket.on(`crawl-complete-${jobId}`, () => {
+      };
+
+      const completeHandler = () => {
         setCrawling(false);
         setStatusMessage('Crawl completed successfully.');
-      });
-      
-      socket.on(`crawl-error-${jobId}`, (data: any) => {
+      };
+
+      const errorHandler = (data: any) => {
         console.error("Crawl error:", data);
         setCrawling(false);
         setStatusMessage(`Error: ${data.error}`);
-        alert(`Crawl failed: ${data.error}`);
-      });
+      };
+
+      socket.on(`crawl-data-${jobId}`, dataHandler);
+      socket.on(`crawl-complete-${jobId}`, completeHandler);
+      socket.on(`crawl-error-${jobId}`, errorHandler);
     } else {
       // Gather mode
       setStatusMessage('Preparing search query...');
@@ -323,25 +344,28 @@ export default function App() {
       const { jobId } = await response.json();
       setActiveJobId(jobId);
        
-      socket.on(`crawl-data-${jobId}`, (data: any) => {
+      const dataHandler = (data: any) => {
         setStatusMessage(`Found: ${data.title || data.url.substring(0, 30)}`);
         setExtractedData(prev => {
-          if (prev.some(item => item.url === data.url)) return prev;
+          if (prev.some((item: any) => item.url === data.url)) return prev;
           return [...prev, data];
         });
-      });
-      
-      socket.on(`crawl-complete-${jobId}`, () => {
+      };
+
+      const completeHandler = () => {
         setCrawling(false);
         setStatusMessage('Gathering completed.');
-      });
-      
-      socket.on(`crawl-error-${jobId}`, (data: any) => {
+      };
+
+      const errorHandler = (data: any) => {
         console.error("Gather error:", data);
         setCrawling(false);
         setStatusMessage(`Error: ${data.error}`);
-        alert(`Gather failed: ${data.error}`);
-      });
+      };
+
+      socket.on(`crawl-data-${jobId}`, dataHandler);
+      socket.on(`crawl-complete-${jobId}`, completeHandler);
+      socket.on(`crawl-error-${jobId}`, errorHandler);
     }
   };
 
