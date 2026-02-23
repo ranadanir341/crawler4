@@ -1,5 +1,5 @@
 {
-  "name": "Crawlee Web Spider",
-  "description": "A powerful web crawler and data gatherer with a live neural visualization UI.",
+  "name": "IntelliSpider",
+  "description": "A powerful web extraction engine and data gatherer with real-time visualization.",
   "requestFramePermissions": []
 }

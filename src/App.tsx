@@ -270,7 +270,9 @@ export default function App() {
   }, [extractedData]);
 
   useEffect(() => {
-    const newSocket = io();
+    // Use the current origin for the socket connection, or an environment variable if provided
+    const socketUrl = (import.meta as any).env.VITE_SOCKET_URL || window.location.origin;
+    const newSocket = io(socketUrl);
     setSocket(newSocket);
     return () => { 
       if (activeJobId) {
@@ -426,20 +428,65 @@ export default function App() {
               <h1 className="text-6xl md:text-7xl font-bold tracking-tight text-slate-900 mb-6">
                 Extract the Web <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-600">
-                  Intelligently
+                  With Precision
                 </span>
               </h1>
               <p className="text-xl text-slate-600 mb-10 leading-relaxed">
-                A powerful, neural-network visualized crawler built on Crawlee. 
-                Gather data, analyze trends, and visualize the web in real-time.
+                Transform raw web data into actionable insights. 
+                Automate market research, monitor competitor trends, and build powerful datasets in minutes.
               </p>
               
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 text-left">
+                <div className="p-8 rounded-3xl bg-white/60 border border-slate-200 shadow-sm backdrop-blur-sm">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 mb-6">
+                    <Activity className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">Market Intelligence</h3>
+                  <p className="text-slate-500 leading-relaxed">
+                    Track pricing, product launches, and customer sentiment across thousands of sites automatically. Stay ahead of the competition with real-time data.
+                  </p>
+                </div>
+                <div className="p-8 rounded-3xl bg-white/60 border border-slate-200 shadow-sm backdrop-blur-sm">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 mb-6">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">Content Aggregation</h3>
+                  <p className="text-slate-500 leading-relaxed">
+                    Build rich content libraries by extracting structured text, images, and metadata. Perfect for training AI models or creating niche content portals.
+                  </p>
+                </div>
+                <div className="p-8 rounded-3xl bg-white/60 border border-slate-200 shadow-sm backdrop-blur-sm">
+                  <div className="w-12 h-12 rounded-2xl bg-cyan-100 flex items-center justify-center text-cyan-600 mb-6">
+                    <LinkIcon className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">Lead Generation</h3>
+                  <p className="text-slate-500 leading-relaxed">
+                    Identify potential partners and clients by discovering relevant business data. Scale your outreach with high-quality, verified information.
+                  </p>
+                </div>
+              </div>
+
+              <div className="max-w-2xl mx-auto mb-16 p-8 rounded-3xl bg-indigo-900 text-white shadow-2xl shadow-indigo-500/20">
+                <h3 className="text-2xl font-bold mb-4">Why use our extraction engine?</h3>
+                <ul className="space-y-4 text-left text-indigo-100">
+                  <li className="flex items-start gap-3">
+                    <div className="mt-1 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold">✓</div>
+                    <span><strong>Lightning Fast:</strong> Optimized traversal algorithms ensure you get your data in record time.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="mt-1 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold">✓</div>
+                    <span><strong>Structured Output:</strong> Export directly to JSON, CSV, or Excel for immediate use in your workflow.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="mt-1 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold">✓</div>
+                    <span><strong>Universal Discovery:</strong> Our Gather mode finds relevant content even when you don't have a starting URL.</span>
+                  </li>
+                </ul>
+              </div>
+              
               <div className="flex gap-4 justify-center">
-                <Button onClick={() => setView('config')} className="text-lg px-8 py-4 shadow-xl shadow-indigo-500/20">
-                  Launch Spider <Play className="w-5 h-5" />
-                </Button>
-                <Button variant="secondary" className="text-lg px-8 py-4 bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-lg shadow-slate-200/50">
-                  Learn More
+                <Button onClick={() => setView('config')} className="text-xl px-10 py-5 shadow-2xl shadow-indigo-500/30">
+                  Launch Extraction Engine <Play className="w-6 h-6" />
                 </Button>
               </div>
             </motion.div>
