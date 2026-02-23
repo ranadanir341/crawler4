@@ -4,7 +4,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "YOUR_BACKEND_SERVER_URL/api/:splat"
+  to = "https://ais-dev-oh7qngkrqbzocwip636inf-218383462907.asia-southeast1.run.app/api/:splat"
   status = 200
 
 [[redirects]]

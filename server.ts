@@ -163,7 +163,7 @@ async function startCrawler(jobId, url, selectors, keywords, limit, type, io, ac
         await enqueueLinks();
       },
       failedRequestHandler({ request, error }) {
-        log(`Failed to process ${request.url}: ${error.message}`);
+        log(`Failed to process ${request.url}: ${(error as any).message}`);
       }
     });
 
@@ -174,7 +174,7 @@ async function startCrawler(jobId, url, selectors, keywords, limit, type, io, ac
     log(`Crawl completed.`);
     io.emit(`crawl-complete-${jobId}`, { status: "completed" });
 
-  } catch (error) {
+  } catch (error: any) {
     log(`Fatal error: ${error.message}`);
     console.error("Crawler error:", error);
     io.emit(`crawl-error-${jobId}`, { error: error.message });
@@ -320,7 +320,7 @@ async function startGatherer(jobId, topic, keywords, limit, selectors, io, activ
     activeCrawlers.delete(jobId);
     io.emit(`crawl-complete-${jobId}`, { status: "completed" });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gatherer error:", error);
     io.emit(`crawl-error-${jobId}`, { error: error.message });
   }

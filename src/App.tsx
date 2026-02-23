@@ -338,9 +338,10 @@ export default function App() {
     
     // Use selected selectors
     const selectors = selectedSelectors;
+    const apiBase = (import.meta as any).env.VITE_SOCKET_URL || '';
 
     if (mode === 'site') {
-      const response = await fetch('/api/crawl', {
+      const response = await fetch(`${apiBase}/api/crawl`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, keywords, limit, selectors }),
@@ -350,7 +351,7 @@ export default function App() {
     } else {
       // Gather mode
       setStatusMessage('Preparing search query...');
-      const response = await fetch('/api/gather', {
+      const response = await fetch(`${apiBase}/api/gather`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, keywords, limit, selectors }),
