@@ -4,7 +4,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://your-backend-url.com/api/:splat"
+  to = "YOUR_BACKEND_SERVER_URL/api/:splat"
   status = 200
 
 [[redirects]]

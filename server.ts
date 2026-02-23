@@ -6,12 +6,21 @@ import path from "path";
 import fs from "fs";
 import { CheerioCrawler, Dataset, KeyValueStore, ProxyConfiguration, EnqueueStrategy } from "crawlee";
 import { GoogleGenAI } from "@google/genai";
+import cors from "cors";
 
 async function startServer() {
   const app = express();
   const httpServer = createServer(app);
-  const io = new Server(httpServer);
+  const io = new Server(httpServer, {
+    cors: {
+      origin: "*", // Allow all origins for simplicity, can be configured for specific domains
+      methods: ["GET", "POST"]
+    }
+  });
   const PORT = 3000;
+
+  // Enable CORS for all routes
+  app.use(cors());
 
   // Store active crawlers to manage them
   const activeCrawlers = new Map();
@@ -20,8 +29,11 @@ async function startServer() {
 
   // API Routes
   app.post("/api/crawl", async (req, res) => {
+    const log = (message) => io.emit('log', `[crawl] ${message}`);
+    log("Received request");
     const { url, selectors, keywords, limit, type } = req.body;
     const jobId = Date.now().toString();
+    log(`Starting job ${jobId}`);
 
     // Start crawling in background
     startCrawler(jobId, url, selectors, keywords, limit, type, io, activeCrawlers);
@@ -30,8 +42,11 @@ async function startServer() {
   });
 
   app.post("/api/gather", async (req, res) => {
+    const log = (message) => io.emit('log', `[gather] ${message}`);
+    log("Received request");
     const { topic, keywords, limit, selectors } = req.body;
     const jobId = Date.now().toString();
+    log(`Starting job ${jobId}`);
     
     // Start gathering in background
     startGatherer(jobId, topic, keywords, limit, selectors, io, activeCrawlers);
@@ -52,14 +67,18 @@ async function startServer() {
   }
 
   io.on("connection", (socket) => {
-    console.log("Client connected");
+    io.emit('log', `[Socket.IO] Client connected: ${socket.id}`);
     socket.on("stop-crawl", ({ jobId }) => {
-      console.log(`Stopping job ${jobId}`);
+      io.emit('log', `[Socket.IO] Received stop-crawl for job ${jobId}`);
       const crawler = activeCrawlers.get(jobId);
       if (crawler) {
         crawler.teardown(); // Best effort stop
         activeCrawlers.delete(jobId);
+        io.emit('log', `[Socket.IO] Job ${jobId} stopped and removed.`);
       }
+    });
+    socket.on("disconnect", () => {
+      io.emit('log', `[Socket.IO] Client disconnected: ${socket.id}`);
     });
   });
 
@@ -70,7 +89,9 @@ async function startServer() {
 
 // Crawler Logic
 async function startCrawler(jobId, url, selectors, keywords, limit, type, io, activeCrawlers) {
+  const log = (message) => io.emit('log', `[crawl-job-${jobId}] ${message}`);
   try {
+    log(`Initializing crawler for ${url}`);
     // Normalize selectors
     const normalizedSelectors = Array.isArray(selectors) 
       ? selectors.map(s => s.toLowerCase().trim()) 
@@ -80,6 +101,7 @@ async function startCrawler(jobId, url, selectors, keywords, limit, type, io, ac
       maxRequestsPerCrawl: parseInt(limit) || 50,
       async requestHandler({ $, request, enqueueLinks }) {
         if (!activeCrawlers.has(jobId)) return;
+        log(`Processing: ${request.url}`);
         const title = $("title").text();
         const extractedData: any = {
           url: request.url,
@@ -130,21 +152,30 @@ async function startCrawler(jobId, url, selectors, keywords, limit, type, io, ac
         }
 
         if (matchesKeywords) {
+          log(`Match found for ${request.url}`);
           // Emit data to client
           io.emit(`crawl-data-${jobId}`, extractedData);
+        } else {
+          log(`No keyword match for ${request.url}`);
         }
           
         // Enqueue more links regardless of match to ensure traversal
         await enqueueLinks();
       },
+      failedRequestHandler({ request, error }) {
+        log(`Failed to process ${request.url}: ${error.message}`);
+      }
     });
 
     activeCrawlers.set(jobId, crawler);
+    log(`Starting crawler run...`);
     await crawler.run([url]);
     activeCrawlers.delete(jobId);
+    log(`Crawl completed.`);
     io.emit(`crawl-complete-${jobId}`, { status: "completed" });
 
   } catch (error) {
+    log(`Fatal error: ${error.message}`);
     console.error("Crawler error:", error);
     io.emit(`crawl-error-${jobId}`, { error: error.message });
   }

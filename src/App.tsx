@@ -274,15 +274,50 @@ export default function App() {
     const socketUrl = (import.meta as any).env.VITE_SOCKET_URL || window.location.origin;
     const newSocket = io(socketUrl);
     setSocket(newSocket);
+
+    newSocket.on('log', (message) => {
+      console.log(`[SERVER LOG] ${message}`);
+    });
+
     return () => { 
-      if (activeJobId) {
-        newSocket.off(`crawl-data-${activeJobId}`);
-        newSocket.off(`crawl-complete-${activeJobId}`);
-        newSocket.off(`crawl-error-${activeJobId}`);
-      }
+      newSocket.off('log');
       newSocket.close(); 
     };
-  }, [activeJobId]);
+  }, []); // Only run once on mount
+
+  // Handle job-specific listeners in a separate effect
+  useEffect(() => {
+    if (!socket || !activeJobId) return;
+
+    const dataHandler = (data: any) => {
+      setStatusMessage(`Extracting from: ${data.url.substring(0, 50)}...`);
+      setExtractedData(prev => {
+        if (prev.some((item: any) => item.url === data.url)) return prev;
+        return [...prev, data];
+      });
+    };
+
+    const completeHandler = () => {
+      setCrawling(false);
+      setStatusMessage('Crawl completed successfully.');
+    };
+
+    const errorHandler = (data: any) => {
+      console.error("Crawl error:", data);
+      setCrawling(false);
+      setStatusMessage(`Error: ${data.error}`);
+    };
+
+    socket.on(`crawl-data-${activeJobId}`, dataHandler);
+    socket.on(`crawl-complete-${activeJobId}`, completeHandler);
+    socket.on(`crawl-error-${activeJobId}`, errorHandler);
+
+    return () => {
+      socket.off(`crawl-data-${activeJobId}`, dataHandler);
+      socket.off(`crawl-complete-${activeJobId}`, completeHandler);
+      socket.off(`crawl-error-${activeJobId}`, errorHandler);
+    };
+  }, [socket, activeJobId]);
 
   const startCrawl = async () => {
     if (mode === 'site' && !url) return;
@@ -312,29 +347,6 @@ export default function App() {
       });
       const { jobId } = await response.json();
       setActiveJobId(jobId);
-      
-      const dataHandler = (data: any) => {
-        setStatusMessage(`Extracting from: ${data.url.substring(0, 50)}...`);
-        setExtractedData(prev => {
-          if (prev.some((item: any) => item.url === data.url)) return prev;
-          return [...prev, data];
-        });
-      };
-
-      const completeHandler = () => {
-        setCrawling(false);
-        setStatusMessage('Crawl completed successfully.');
-      };
-
-      const errorHandler = (data: any) => {
-        console.error("Crawl error:", data);
-        setCrawling(false);
-        setStatusMessage(`Error: ${data.error}`);
-      };
-
-      socket.on(`crawl-data-${jobId}`, dataHandler);
-      socket.on(`crawl-complete-${jobId}`, completeHandler);
-      socket.on(`crawl-error-${jobId}`, errorHandler);
     } else {
       // Gather mode
       setStatusMessage('Preparing search query...');
@@ -345,29 +357,6 @@ export default function App() {
       });
       const { jobId } = await response.json();
       setActiveJobId(jobId);
-       
-      const dataHandler = (data: any) => {
-        setStatusMessage(`Found: ${data.title || data.url.substring(0, 30)}`);
-        setExtractedData(prev => {
-          if (prev.some((item: any) => item.url === data.url)) return prev;
-          return [...prev, data];
-        });
-      };
-
-      const completeHandler = () => {
-        setCrawling(false);
-        setStatusMessage('Gathering completed.');
-      };
-
-      const errorHandler = (data: any) => {
-        console.error("Gather error:", data);
-        setCrawling(false);
-        setStatusMessage(`Error: ${data.error}`);
-      };
-
-      socket.on(`crawl-data-${jobId}`, dataHandler);
-      socket.on(`crawl-complete-${jobId}`, completeHandler);
-      socket.on(`crawl-error-${jobId}`, errorHandler);
     }
   };
 
